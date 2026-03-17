@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Storyteller</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --ink: #1a1025;
+    --paper: #fdf8f2;
+    --accent: #e8623a;
+    --gold: #f0b429;
+    --muted: #8a7d8f;
+    --border: rgba(26,16,37,0.1);
+    --panel: #f5ede0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  .header {
+    background: var(--ink);
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo { font-size: 22px; }
+  .logo-text { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+  .status-dot {
+    margin-left: auto;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+  }
+  .status-dot.listening { background: #4ade80; animation: pulse 2s infinite; }
+  .status-dot.generating { background: var(--gold); animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+  .body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+  .status-bar {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-bar .label { font-weight: 500; color: var(--ink); }
+  .timer { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  .error-banner {
+    background: #fff1f0;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #dc2626;
+    display: none;
+  }
+  .error-banner.visible { display: block; }
+
+  .image-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(26,16,37,0.06);
+  }
+  .image-wrap {
+    width: 100%;
+    aspect-ratio: 3/2;
+    background: var(--panel);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .image-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.5s;
+  }
+  .placeholder {
+    text-align: center;
+    color: var(--muted);
+    padding: 20px;
+    font-size: 13px;
+  }
+  .placeholder .icon { font-size: 36px; margin-bottom: 8px; }
+
+  .loading-overlay {
+    position: absolute; inset: 0;
+    background: rgba(253,248,242,0.88);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .loading-overlay.visible { opacity: 1; pointer-events: all; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  .story-meta {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    display: none;
+  }
+  .story-time { font-size: 10px; color: var(--muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; }
+  .story-summary { font-size: 13px; line-height: 1.6; }
+  .story-prompt { margin-top: 6px; font-size: 11px; color: var(--muted); font-style: italic; }
+  .story-prompt span { color: var(--accent); font-style: normal; font-weight: 500; }
+
+  .section-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
+  .history-list { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+  .history-item {
+    background: var(--panel);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+  .history-item:hover { border-color: var(--accent); color: var(--ink); }
+  .history-item .hi-time { font-size: 10px; color: var(--gold); font-weight: 500; margin-bottom: 2px; }
+
+  .footer { text-align: center; font-size: 10px; color: var(--muted); padding-bottom: 14px; }
+
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">📖</div>
+  <div>
+    <div class="logo-text">Storyteller</div>
+    <div class="logo-sub">Live Meeting Illustrator</div>
+  </div>
+  <div class="status-dot listening" id="statusDot"></div>
+</div>
+
+<div class="body">
+
+  <div class="status-bar">
+    <span class="label" id="statusLabel">Listening for captions…</span>
+    <span class="timer" id="timerLabel"></span>
+  </div>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <div class="image-card">
+    <div class="image-wrap" id="imageWrap">
+      <div class="placeholder" id="placeholder">
+        <div class="icon">🎨</div>
+        <p>Your meeting will come to life here.<br/>Make sure <strong>captions are on</strong>.</p>
+      </div>
+      <img id="storyImage" src="" alt="Story illustration" style="display:none;opacity:0;"/>
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Illustrating your meeting…</div>
+      </div>
+    </div>
+    <div class="story-meta" id="storyMeta">
+      <div class="story-time" id="storyTime"></div>
+      <div class="story-summary" id="storySummary"></div>
+      <div class="story-prompt">🖌 <span id="storyPrompt"></span></div>
+    </div>
+  </div>
+
+  <div id="historySection" style="display:none;">
+    <div class="section-title">Earlier this meeting</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <div class="footer">Ollama + Hugging Face · Updates every 30s</div>
+</div>
+
+<script>
+// ── Communication with Apps Script ────────────────────────
+// The Meet add-on posts messages to this iframe via postMessage
+
+const statusDot    = document.getElementById('statusDot');
+const statusLabel  = document.getElementById('statusLabel');
+const timerLabel   = document.getElementById('timerLabel');
+const errorBanner  = document.getElementById('errorBanner');
+const placeholder  = document.getElementById('placeholder');
+const storyImage   = document.getElementById('storyImage');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const storyMeta    = document.getElementById('storyMeta');
+const storyTime    = document.getElementById('storyTime');
+const storySummary = document.getElementById('storySummary');
+const storyPrompt  = document.getElementById('storyPrompt');
+const historySection = document.getElementById('historySection');
+const historyList  = document.getElementById('historyList');
+
+let countdown = 30;
+let storyHistory = [];
+
+// Start countdown
+setInterval(() => {
+  countdown = Math.max(0, countdown - 1);
+  timerLabel.textContent = `Next: ${countdown}s`;
+  if (countdown === 0) countdown = 30;
+}, 1000);
+
+// Listen for messages from Apps Script
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || !data.type) return;
+
+  if (data.type === 'STORY_UPDATED') {
+    renderStory(data.story);
+    countdown = 30;
+  }
+  if (data.type === 'STORY_GENERATING') {
+    showLoading(true);
+    setStatus('generating', 'Generating illustration…');
+  }
+  if (data.type === 'STORY_ERROR') {
+    showLoading(false);
+    showError(data.error);
+    setStatus('listening', 'Listening for captions…');
+  }
+});
+
+function renderStory(story) {
+  showLoading(false);
+  hideError();
+  setStatus('listening', 'Listening for captions…');
+
+  placeholder.style.display = 'none';
+  storyImage.style.display = 'block';
+  storyImage.style.opacity = '0';
+  storyImage.src = story.imageData;
+  storyImage.onload = () => { storyImage.style.opacity = '1'; };
+  storyImage.onerror = () => {
+    placeholder.style.display = 'flex';
+    storyImage.style.display = 'none';
+    showError('Image could not load — will retry next cycle.');
+  };
+
+  storyMeta.style.display = 'block';
+  storyTime.textContent = '🕐 ' + story.timestamp;
+  storySummary.textContent = story.summary;
+  storyPrompt.textContent = story.imagePrompt;
+
+  storyHistory.unshift(story);
+  if (storyHistory.length > 6) storyHistory.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  if (storyHistory.length <= 1) return;
+  historySection.style.display = 'block';
+  historyList.innerHTML = '';
+  storyHistory.slice(1).forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<div class="hi-time">${s.timestamp}</div>${s.summary}`;
+    div.onclick = () => renderStory(s);
+    historyList.appendChild(div);
+  });
+}
+
+function setStatus(state, label) {
+  statusDot.className = 'status-dot ' + state;
+  statusLabel.textContent = label;
+}
+
+function showLoading(show) {
+  loadingOverlay.classList.toggle('visible', show);
+}
+
+function showError(msg) {
+  errorBanner.textContent = '⚠️ ' + msg;
+  errorBanner.classList.add('visible');
+}
+
+function hideError() {
+  errorBanner.classList.remove('visible');
+}
+</script>
+</body>
+</html>
