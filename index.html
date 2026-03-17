@@ -4,7 +4,6 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Storyteller</title>
-<script src="https://www.gstatic.com/meetjs/addons/1.1.0/meet.addons.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -22,20 +21,65 @@
   .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
   .status-dot {
     margin-left: auto; width: 8px; height: 8px;
-    border-radius: 50%; background: #4ade80;
-    animation: pulse 2s infinite; flex-shrink: 0;
+    border-radius: 50%; background: #4ade80; flex-shrink: 0;
   }
+  .status-dot.generating { background: var(--gold); animation: pulse 0.8s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
 
   .body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 
-  .status-bar {
-    background: var(--panel); border-radius: 8px; padding: 8px 12px;
-    font-size: 12px; color: var(--muted); border: 1px solid var(--border);
-    display: flex; align-items: center; gap: 8px;
+  /* Input area */
+  .input-section {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
-  .status-bar .label { font-weight: 500; color: var(--ink); }
-  .timer { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .input-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--panel);
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  .btn-generate {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.3px;
+  }
+  .btn-generate:hover { opacity: 0.9; }
+  .btn-generate:active { transform: scale(0.98); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .error-banner {
     background: #fff1f0; border: 1px solid #fecaca; border-radius: 8px;
@@ -46,18 +90,18 @@
   .image-card {
     background: #fff; border-radius: 12px; overflow: hidden;
     border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(26,16,37,0.06);
+    display: none;
   }
+  .image-card.visible { display: block; }
   .image-wrap {
     width: 100%; aspect-ratio: 3/2; background: var(--panel);
     display: flex; align-items: center; justify-content: center;
     position: relative; overflow: hidden;
   }
   .image-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 0.5s; }
-  .placeholder { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
-  .placeholder .icon { font-size: 36px; margin-bottom: 8px; }
 
   .loading-overlay {
-    position: absolute; inset: 0; background: rgba(253,248,242,0.88);
+    position: absolute; inset: 0; background: rgba(253,248,242,0.9);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 10px; opacity: 0; pointer-events: none; transition: opacity 0.3s;
   }
@@ -70,10 +114,10 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 12px; color: var(--muted); font-style: italic; }
 
-  .story-meta { padding: 12px 14px; border-top: 1px solid var(--border); display: none; }
+  .story-meta { padding: 12px 14px; border-top: 1px solid var(--border); }
   .story-time { font-size: 10px; color: var(--muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 5px; }
-  .story-summary { font-size: 13px; line-height: 1.6; }
-  .story-prompt { margin-top: 6px; font-size: 11px; color: var(--muted); font-style: italic; }
+  .story-summary { font-size: 13px; line-height: 1.6; margin-bottom: 6px; }
+  .story-prompt { font-size: 11px; color: var(--muted); font-style: italic; }
   .story-prompt span { color: var(--accent); font-style: normal; font-weight: 500; }
 
   .section-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 6px; }
@@ -81,10 +125,16 @@
   .history-item {
     background: var(--panel); border-radius: 7px; padding: 7px 10px;
     font-size: 12px; color: var(--muted); border: 1px solid var(--border);
-    cursor: pointer; line-height: 1.5;
+    cursor: pointer; line-height: 1.5; transition: border-color 0.2s;
   }
   .history-item:hover { border-color: var(--accent); color: var(--ink); }
   .history-item .hi-time { font-size: 10px; color: var(--gold); font-weight: 500; margin-bottom: 2px; }
+
+  .placeholder-card {
+    background: #fff; border-radius: 12px; border: 1px dashed var(--border);
+    padding: 28px 20px; text-align: center; color: var(--muted); font-size: 13px;
+  }
+  .placeholder-card .icon { font-size: 36px; margin-bottom: 10px; }
 
   .footer { text-align: center; font-size: 10px; color: var(--muted); padding-bottom: 12px; }
 </style>
@@ -100,121 +150,207 @@
 </div>
 
 <div class="body">
-  <div class="status-bar">
-    <span class="label" id="statusLabel">Connecting…</span>
-    <span class="timer" id="timerLabel"></span>
+
+  <!-- Input Section -->
+  <div class="input-section">
+    <div class="input-label">📝 What's being discussed?</div>
+    <textarea id="topicInput" placeholder="Type or paste what's being discussed in your meeting…&#10;&#10;e.g. 'We are reviewing the Q3 budget and discussing sales targets for next year'"></textarea>
+    <button class="btn-generate" id="generateBtn" onclick="generateStory()">
+      🎨 Generate Illustration
+    </button>
   </div>
 
   <div class="error-banner" id="errorBanner"></div>
 
-  <div class="image-card">
-    <div class="image-wrap" id="imageWrap">
-      <div class="placeholder" id="placeholder">
-        <div class="icon">🎨</div>
-        <p>Your meeting will come to life here.<br/>Enable <strong>Live Captions</strong> (CC button).</p>
-      </div>
-      <img id="storyImage" src="" alt="Story illustration" style="display:none;opacity:0;"/>
+  <!-- Placeholder shown before first image -->
+  <div class="placeholder-card" id="placeholderCard">
+    <div class="icon">🎨</div>
+    <p>Type what's being discussed above<br/>and press <strong>Generate Illustration</strong></p>
+  </div>
+
+  <!-- Image Card -->
+  <div class="image-card" id="imageCard">
+    <div class="image-wrap">
+      <img id="storyImage" src="" alt="Story illustration" style="opacity:0;"/>
       <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner"></div>
-        <div class="loading-text">Illustrating your meeting…</div>
+        <div class="loading-text" id="loadingText">Summarising…</div>
       </div>
     </div>
-    <div class="story-meta" id="storyMeta">
+    <div class="story-meta">
       <div class="story-time" id="storyTime"></div>
       <div class="story-summary" id="storySummary"></div>
       <div class="story-prompt">🖌 <span id="storyPrompt"></span></div>
     </div>
   </div>
 
+  <!-- History -->
   <div id="historySection" style="display:none;">
     <div class="section-title">Earlier this meeting</div>
     <div class="history-list" id="historyList"></div>
   </div>
 
-  <div class="footer">Hugging Face · Updates every 30s</div>
+  <div class="footer">Hugging Face · Free image generation</div>
 </div>
 
 <script>
-const statusDot     = document.getElementById('statusDot');
-const statusLabel   = document.getElementById('statusLabel');
-const timerLabel    = document.getElementById('timerLabel');
-const errorBanner   = document.getElementById('errorBanner');
-const placeholder   = document.getElementById('placeholder');
-const storyImage    = document.getElementById('storyImage');
-const loadingOverlay = document.getElementById('loadingOverlay');
-const storyMeta     = document.getElementById('storyMeta');
-const storyTime     = document.getElementById('storyTime');
-const storySummary  = document.getElementById('storySummary');
-const storyPrompt   = document.getElementById('storyPrompt');
-const historySection = document.getElementById('historySection');
-const historyList   = document.getElementById('historyList');
+const POLLINATIONS_BASE = 'https://image.pollinations.ai/prompt/';
+const HF_API_URL = 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell';
 
-let countdown = 30;
+const STOP_WORDS = new Set([
+  'the','a','an','and','or','but','in','on','at','to','for','of','with',
+  'is','are','was','were','be','been','being','have','has','had','do','does',
+  'did','will','would','could','should','may','might','shall','can','need',
+  'i','we','you','he','she','they','it','this','that','these','those','my',
+  'our','your','his','her','their','its','me','us','him','them','what','how',
+  'when','where','why','who','which','so','if','as','by','from','up','about',
+  'into','through','during','before','after','above','below','between','out',
+  'off','over','under','again','then','once','here','there','just','also',
+  'very','more','most','other','some','such','no','not','only','same','than',
+  'too','really','like','know','think','going','yeah','okay','yes','right',
+  'actually','basically','kind','sort','mean','guess','um','uh','well','let',
+  'get','got','go','make','see','say','said','want','need','look','come',
+  'take','give','use','find','tell','ask','work','seem','feel','try','leave',
+  'call','keep','put','set','run','move','live','believe','hold','bring','happen'
+]);
+
+const TOPIC_SCENES = {
+  budget:'business people reviewing financial charts',
+  finance:'financial analysts studying colorful stock market data',
+  sales:'salespeople celebrating a deal with handshakes',
+  marketing:'creative team brainstorming around a whiteboard',
+  strategy:'chess pieces on a board with business people planning',
+  product:'engineers building and launching a rocket',
+  launch:'rocket launching into a colorful sky',
+  deadline:'person racing against a giant clock',
+  project:'team collaborating on colorful building blocks',
+  team:'diverse group of people working together',
+  meeting:'people in discussion around a glowing table',
+  data:'colorful bar charts floating in the air',
+  growth:'tiny plant growing into a towering tree',
+  customer:'happy customers receiving wrapped gift boxes',
+  design:'artists splashing paint on enormous canvases',
+  code:'programmer surrounded by glowing lines of code',
+  software:'gears and circuits forming an elegant machine',
+  technology:'futuristic city with glowing holographic interfaces',
+  security:'knight guarding a glowing golden vault door',
+  hiring:'manager welcoming a smiling new team member',
+  training:'teacher writing on chalkboard for eager students',
+  health:'cheerful doctor and patient in a sunny clinic',
+  surgery:'surgeon performing careful operation in bright theatre',
+  medical:'doctors reviewing patient scans in a hospital',
+  knee:'doctor carefully examining knee with medical tools',
+  science:'scientists experimenting with glowing colorful beakers',
+  education:'students learning in a sunny colorful classroom',
+  sport:'athletes competing on a vibrant sports field',
+  innovation:'inventor surrounded by floating lightbulbs',
+  revenue:'golden coins raining into a treasure chest',
+  remote:'people on glowing screens waving from cozy homes',
+  legal:'lawyers reviewing scrolls in a grand hall',
+  compliance:'inspector ticking items on a golden checklist',
+  risk:'tightrope walker crossing between two tall buildings',
+  partnership:'two groups joining hands to build a bridge',
+};
+
 let storyHistory = [];
-let addonSession = null;
 
-// ── Init Meet Add-on SDK ──────────────────────────────────
-async function initAddon() {
+async function generateStory() {
+  const text = document.getElementById('topicInput').value.trim();
+  if (!text) {
+    showError('Please type what is being discussed first!');
+    return;
+  }
+
+  hideError();
+  setGenerating(true);
+  setLoadingText('Summarising topic…');
+  showImageCard(true);
+
   try {
-    addonSession = await window.meet.addon.createAddonSession({
-      cloudProjectNumber: '36350907164'
-    });
-    statusLabel.textContent = 'Listening for captions…';
+    // Step 1: Build summary and image prompt
+    const { summary, imagePrompt } = buildStory(text);
 
-    // Listen for co-activity state (used to pass story data from Apps Script)
-    const sidePanelClient = await addonSession.createSidePanelClient();
+    // Step 2: Generate image
+    setLoadingText('Generating illustration…');
+    const styledPrompt = imagePrompt + ', illustrated cartoon style, vibrant colors, storybook illustration, flat design, high quality';
+    const imageData = await fetchImage(styledPrompt);
 
-    sidePanelClient.addEventListener('activitystarted', (event) => {
-      const data = event.detail;
-      if (data && data.type === 'STORY_UPDATED') {
-        renderStory(data.story);
-        countdown = 30;
-        showLoading(false);
-      }
-      if (data && data.type === 'STORY_GENERATING') {
-        showLoading(true);
-        statusLabel.textContent = 'Generating illustration…';
-      }
-      if (data && data.type === 'STORY_ERROR') {
-        showLoading(false);
-        showError(data.error);
-      }
-    });
+    // Step 3: Render
+    renderStory({ summary, imagePrompt, imageData, timestamp: new Date().toLocaleTimeString() });
 
   } catch(err) {
-    console.error('Meet SDK init error:', err);
-    statusLabel.textContent = 'Ready — waiting for captions';
+    showError('Could not generate image: ' + err.message + '. Please try again.');
+    setGenerating(false);
+    showLoading(false);
   }
 }
 
-// Countdown timer
-setInterval(() => {
-  countdown = Math.max(0, countdown - 1);
-  timerLabel.textContent = `Next: ${countdown}s`;
-  if (countdown === 0) countdown = 30;
-}, 1000);
+// Allow Enter+Ctrl to submit
+document.getElementById('topicInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.ctrlKey) generateStory();
+});
+
+function buildStory(text) {
+  const words = text.toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/)
+    .filter(w => w.length > 3 && !STOP_WORDS.has(w));
+
+  const freq = {};
+  words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+  const topWords = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,8).map(([w]) => w);
+
+  if (topWords.length === 0) return {
+    summary: text.slice(0, 120),
+    imagePrompt: 'people having a productive discussion around a glowing table'
+  };
+
+  let imagePrompt = null;
+  for (const w of topWords) {
+    if (TOPIC_SCENES[w]) { imagePrompt = TOPIC_SCENES[w]; break; }
+  }
+  if (!imagePrompt) imagePrompt = 'people enthusiastically collaborating on ' + topWords.slice(0,3).join(', ') + ' in a vibrant workspace';
+
+  const summary = text.length > 120 ? text.slice(0, 120) + '…' : text;
+  return { summary, imagePrompt };
+}
+
+async function fetchImage(prompt) {
+  // Try Hugging Face first
+  try {
+    const response = await fetch(HF_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inputs: prompt })
+    });
+    if (response.ok) {
+      const blob = await response.blob();
+      if (blob.type.startsWith('image/')) return URL.createObjectURL(blob);
+    }
+  } catch(e) {
+    console.warn('HF failed:', e.message);
+  }
+
+  // Fall back to Pollinations
+  const url = POLLINATIONS_BASE + encodeURIComponent(prompt) + '?width=768&height=512&nologo=true&seed=' + Date.now();
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Image generation failed');
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
 
 function renderStory(story) {
   showLoading(false);
-  hideError();
-  statusLabel.textContent = 'Listening for captions…';
+  setGenerating(false);
 
-  placeholder.style.display = 'none';
-  storyImage.style.display = 'block';
-  storyImage.style.opacity = '0';
-  storyImage.src = story.imageUrl || story.imageData;
-  storyImage.onload = () => { storyImage.style.opacity = '1'; };
-  storyImage.onerror = () => {
-    placeholder.style.display = 'flex';
-    storyImage.style.display = 'none';
-    showError('Image could not load — will retry next cycle.');
-  };
+  const img = document.getElementById('storyImage');
+  img.style.opacity = '0';
+  img.src = story.imageData;
+  img.onload = () => { img.style.opacity = '1'; };
 
-  storyMeta.style.display = 'block';
-  storyTime.textContent = '🕐 ' + story.timestamp;
-  storySummary.textContent = story.summary;
-  storyPrompt.textContent = story.imagePrompt;
+  document.getElementById('storyTime').textContent = '🕐 ' + story.timestamp;
+  document.getElementById('storySummary').textContent = story.summary;
+  document.getElementById('storyPrompt').textContent = story.imagePrompt;
 
+  // Add to history
   storyHistory.unshift(story);
   if (storyHistory.length > 6) storyHistory.pop();
   renderHistory();
@@ -222,23 +358,39 @@ function renderStory(story) {
 
 function renderHistory() {
   if (storyHistory.length <= 1) return;
-  historySection.style.display = 'block';
-  historyList.innerHTML = '';
+  const section = document.getElementById('historySection');
+  const list = document.getElementById('historyList');
+  section.style.display = 'block';
+  list.innerHTML = '';
   storyHistory.slice(1).forEach(s => {
     const div = document.createElement('div');
     div.className = 'history-item';
     div.innerHTML = `<div class="hi-time">${s.timestamp}</div>${s.summary}`;
-    div.onclick = () => renderStory(s);
-    historyList.appendChild(div);
+    div.onclick = () => {
+      document.getElementById('storyImage').src = s.imageData;
+      document.getElementById('storySummary').textContent = s.summary;
+      document.getElementById('storyPrompt').textContent = s.imagePrompt;
+      document.getElementById('storyTime').textContent = '🕐 ' + s.timestamp;
+    };
+    list.appendChild(div);
   });
 }
 
-function showLoading(show) { loadingOverlay.classList.toggle('visible', show); }
-function showError(msg) { errorBanner.textContent = '⚠️ ' + msg; errorBanner.classList.add('visible'); }
-function hideError() { errorBanner.classList.remove('visible'); }
+function showImageCard(show) {
+  document.getElementById('imageCard').classList.toggle('visible', show);
+  document.getElementById('placeholderCard').style.display = show ? 'none' : 'block';
+  if (show) showLoading(true);
+}
 
-// Start
-initAddon();
+function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('visible', show); }
+function setLoadingText(t) { document.getElementById('loadingText').textContent = t; }
+function setGenerating(v) {
+  document.getElementById('generateBtn').disabled = v;
+  document.getElementById('generateBtn').textContent = v ? '⏳ Generating…' : '🎨 Generate Illustration';
+  document.getElementById('statusDot').className = 'status-dot' + (v ? ' generating' : '');
+}
+function showError(msg) { const b = document.getElementById('errorBanner'); b.textContent = '⚠️ ' + msg; b.classList.add('visible'); }
+function hideError() { document.getElementById('errorBanner').classList.remove('visible'); }
 </script>
 </body>
 </html>
